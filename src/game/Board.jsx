@@ -29,33 +29,38 @@ export const Board = () => {
   }, []);
 
   const generateNonOverlappingPosition = (existingBoxes, boardWidth, boardHeight, centerCubes) => {
-    const padding = 10;
-    const maxTries = 500;
+    const padding = 20; // bigger gap between letters
+    const maxTries = 1500; // allow more attempts for dense layouts
+    const minDistance = cubeSize + padding;
+
     for (let i = 0; i < maxTries; i++) {
       const x = SAFE_ZONE.left + Math.random() * (boardWidth - cubeSize - SAFE_ZONE.left - SAFE_ZONE.right);
       const y = SAFE_ZONE.top + Math.random() * (boardHeight - cubeSize - SAFE_ZONE.top - SAFE_ZONE.bottom);
 
-      const overlapWithLetters = existingBoxes.some((box) => {
-        return !(
-          x + cubeSize + padding < box.x ||
-          x > box.x + cubeSize + padding ||
-          y + cubeSize + padding < box.y ||
-          y > box.y + cubeSize + padding
-        );
+      // Check distance-based overlap instead of bounding boxes (smoother and stricter)
+      const tooCloseToLetter = existingBoxes.some((box) => {
+        const dx = x - box.x;
+        const dy = y - box.y;
+        return Math.sqrt(dx * dx + dy * dy) < minDistance;
       });
 
-      const overlapWithCubes = centerCubes.some((cube) => {
-        return !(
-          x + cubeSize + padding < cube.x ||
-          x > cube.x + cubeSize + padding ||
-          y + cubeSize + padding < cube.y ||
-          y > cube.y + cubeSize + padding
-        );
+      const tooCloseToCube = centerCubes.some((cube) => {
+        const dx = x - cube.x;
+        const dy = y - cube.y;
+        return Math.sqrt(dx * dx + dy * dy) < minDistance;
       });
 
-      if (!overlapWithLetters && !overlapWithCubes) return { x, y };
+      if (!tooCloseToLetter && !tooCloseToCube) {
+        return { x, y };
+      }
     }
-    return { x: SAFE_ZONE.left, y: SAFE_ZONE.top };
+
+    // As a last resort: place near the safe zone but still offset randomly
+    const fallbackX =
+      SAFE_ZONE.left + Math.random() * (boardWidth - cubeSize - SAFE_ZONE.left - SAFE_ZONE.right);
+    const fallbackY =
+      SAFE_ZONE.top + Math.random() * (boardHeight - cubeSize - SAFE_ZONE.top - SAFE_ZONE.bottom);
+    return { x: fallbackX, y: fallbackY };
   };
 
   const handleShowCenter = () => {
@@ -64,36 +69,42 @@ export const Board = () => {
     clickSound.current.currentTime = 0;
     clickSound.current.play();
 
-    // const boardRect = boardRef.current.getBoundingClientRect();
-    // const boardWidth = boardRect.width;
-    // const boardHeight = boardRect.height;
+    // Wait one frame so the layout (especially on mobile) is stable
+    requestAnimationFrame(() => {
+      const boardRect = boardRef.current.getBoundingClientRect();
+      const boardWidth = boardRect.width;
+      const boardHeight = boardRect.height;
 
-    const boardRect = boardRef.current?.getBoundingClientRect();
-    const boardWidth = boardRect?.width || window.innerWidth;
-    const boardHeight = boardRect?.height || window.innerHeight;
+      if (boardWidth === 0 || boardHeight === 0) {
+        // fallback: try again after a short delay if layout not ready
+        setTimeout(handleShowCenter, 100);
+        return;
+      }
 
-    const centerCubesArray = inputValue.split('').map((ch, i) => {
-      const left = boardWidth / 2 - (inputValue.length * cubeSize) / 2 + i * cubeSize;
-      const top = boardHeight / 2;
-      return { char: ch, filled: false, x: left, y: top, id: i, winEffect: false };
+      const centerCubesArray = inputValue.split('').map((ch, i) => {
+        const left = boardWidth / 2 - (inputValue.length * cubeSize) / 2 + i * cubeSize;
+        const top = boardHeight / 2;
+        return { char: ch, filled: false, x: left, y: top, id: i, winEffect: false };
+      });
+      setCenterCubes(centerCubesArray);
+
+      const existingBoxes = [...centerCubesArray];
+      const newLetters = inputValue.split('').map((ch, i) => {
+        const pos = generateNonOverlappingPosition(existingBoxes, boardWidth, boardHeight, centerCubesArray);
+        existingBoxes.push(pos);
+        return {
+          char: ch,
+          x: (pos.x / boardWidth) * 100,
+          y: (pos.y / boardHeight) * 100,
+          id: i,
+          fading: false,
+        };
+      });
+
+      setLetters(newLetters);
+      setFireworks([]);
+      setScatteredPieces([]);
     });
-    setCenterCubes(centerCubesArray);
-
-    const existingBoxes = [...centerCubesArray];
-    const newLetters = inputValue.split('').map((ch, i) => {
-      const pos = generateNonOverlappingPosition(existingBoxes, boardWidth, boardHeight, centerCubesArray);
-      existingBoxes.push(pos);
-      return {
-        char: ch,
-        x: (pos.x / boardWidth) * 100,
-        y: (pos.y / boardHeight) * 100,
-        id: i,
-        fading: false,
-      };
-    });
-    setLetters(newLetters);
-    setFireworks([]);
-    setScatteredPieces([]);
   };
 
   const handleDown = (index, e) => {
