@@ -29,7 +29,7 @@ export const Board = () => {
   }, []);
 
   const generateNonOverlappingPosition = (existingBoxes, boardWidth, boardHeight, centerCubes) => {
-  const padding = 25; // minimal space between letters/cubes
+  const padding = 25; 
   const maxTries = 1500;
   const minDistance = cubeSize + padding;
 
@@ -59,49 +59,7 @@ export const Board = () => {
   };
 };
 
-  // const handleShowCenter = () => {
-  //   if (gameOver || !inputValue) return;
 
-  //   clickSound.current.currentTime = 0;
-  //   clickSound.current.play();
-
- 
-  //   requestAnimationFrame(() => {
-  //     const boardRect = boardRef.current.getBoundingClientRect();
-  //     const boardWidth = boardRect.width;
-  //     const boardHeight = boardRect.height;
-
-  //     if (boardWidth === 0 || boardHeight === 0) {
-       
-  //       setTimeout(handleShowCenter, 100);
-  //       return;
-  //     }
-
-  //     const centerCubesArray = inputValue.split('').map((ch, i) => {
-  //       const left = boardWidth / 2 - (inputValue.length * cubeSize) / 2 + i * cubeSize;
-  //       const top = boardHeight / 2;
-  //       return { char: ch, filled: false, x: left, y: top, id: i, winEffect: false };
-  //     });
-  //     setCenterCubes(centerCubesArray);
-
-  //     const existingBoxes = [...centerCubesArray];
-  //     const newLetters = inputValue.split('').map((ch, i) => {
-  //       const pos = generateNonOverlappingPosition(existingBoxes, boardWidth, boardHeight, centerCubesArray);
-  //       existingBoxes.push(pos);
-  //       return {
-  //         char: ch,
-  //         x: (pos.x / boardWidth) * 100,
-  //         y: (pos.y / boardHeight) * 100,
-  //         id: i,
-  //         fading: false,
-  //       };
-  //     });
-
-  //     setLetters(newLetters);
-  //     setFireworks([]);
-  //     setScatteredPieces([]);
-  //   });
-  // };
 
   const handleShowCenter = () => {
   if (gameOver || !inputValue) return;
@@ -109,11 +67,11 @@ export const Board = () => {
   clickSound.current.currentTime = 0;
   clickSound.current.play();
 
-  // Small delay ensures layout settles after keyboard closes
+  
   setTimeout(() => {
     const boardRect = boardRef.current?.getBoundingClientRect();
     if (!boardRect || boardRect.width === 0 || boardRect.height === 0) {
-      // Retry again if layout not ready yet
+     
       requestAnimationFrame(handleShowCenter);
       return;
     }
@@ -128,7 +86,7 @@ export const Board = () => {
     });
     setCenterCubes(centerCubesArray);
 
-    // Generate letter positions with stronger spacing logic
+    
     const existingBoxes = [...centerCubesArray];
     const newLetters = inputValue.split('').map((ch, i) => {
       const pos = generateNonOverlappingPosition(
@@ -151,12 +109,12 @@ export const Board = () => {
     setFireworks([]);
     setScatteredPieces([]);
 
-    // After rendering, ensure cubes/letters respond to touch immediately
+   
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.activeElement?.blur(); // close mobile keyboard
+      document.activeElement?.blur(); 
     }, 100);
-  }, 100); // small delay after button press
+  }, 100);
 };
 
   const handleDown = (index, e) => {
@@ -324,6 +282,7 @@ export const Board = () => {
         <button className="showBtn" onClick={handleShowCenter} disabled={gameOver}>
           ითამაშე
         </button>
+        <label className='label'>შეიყვანე შენი სახელი</label>
       </div>
 
       <div className="main-board">
