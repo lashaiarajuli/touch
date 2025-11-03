@@ -64,9 +64,13 @@ export const Board = () => {
     clickSound.current.currentTime = 0;
     clickSound.current.play();
 
-    const boardRect = boardRef.current.getBoundingClientRect();
-    const boardWidth = boardRect.width;
-    const boardHeight = boardRect.height;
+    // const boardRect = boardRef.current.getBoundingClientRect();
+    // const boardWidth = boardRect.width;
+    // const boardHeight = boardRect.height;
+
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const boardWidth = boardRect?.width || window.innerWidth;
+    const boardHeight = boardRect?.height || window.innerHeight;
 
     const centerCubesArray = inputValue.split('').map((ch, i) => {
       const left = boardWidth / 2 - (inputValue.length * cubeSize) / 2 + i * cubeSize;
