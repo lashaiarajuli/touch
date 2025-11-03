@@ -143,66 +143,96 @@ export const Board = () => {
     );
   };
 
-  const handleUp = () => {
-    if (draggingIndex === null || gameOver) return;
-    const boardRect = boardRef.current.getBoundingClientRect();
-    const letter = letters[draggingIndex];
-    const cubePixelSize = cubeSize;
-    let snappedIndex = null;
+  
 
-    setCenterCubes((prevCubes) => {
-      const updatedCubes = prevCubes.map((cube, i) => {
-        if (!cube.filled) {
-          const letterX = (letter.x / 100) * boardRect.width;
-          const letterY = (letter.y / 100) * boardRect.height;
-          const dx = Math.abs(letterX - cube.x);
-          const dy = Math.abs(letterY - cube.y);
+const handleUp = () => {
+  if (draggingIndex === null || gameOver) return;
+  const boardRect = boardRef.current.getBoundingClientRect();
+  const letter = letters[draggingIndex];
 
-          if (dx < cubePixelSize / 2 && dy < cubePixelSize / 2 && letter.char === cube.char) {
-            snappedIndex = i;
+  let snappedIndex = null;
 
-            setLetters((prevLetters) =>
-              prevLetters.map((l, idx) =>
-                idx === draggingIndex
-                  ? { ...l, x: (cube.x / boardRect.width) * 100, y: (cube.y / boardRect.height) * 100, fading: true }
-                  : l
-              )
-            );
+  setCenterCubes((prevCubes) => {
+    const updatedCubes = prevCubes.map((cube, i) => {
+      if (cube.filled) return cube;
 
-            dropSound.current.currentTime = 0;
-            dropSound.current.play();
+      // find DOM elements for cube and letter
+      const cubeElem = boardRef.current.querySelector(`[data-cube-id="${cube.id}"]`);
+      const letterElem = boardRef.current.querySelector(`[data-letter-id="${letter.id}"]`);
 
-            return { ...cube, filled: true };
-          }
-        }
-        return cube;
-      });
+      if (!cubeElem || !letterElem) return cube;
 
-      const allFilled = updatedCubes.every((cube) => cube.filled);
-      if (allFilled) {
-        winSound.current.currentTime = 0;
-        winSound.current.play();
+      const cubeRect = cubeElem.getBoundingClientRect();
+      const letterRect = letterElem.getBoundingClientRect();
 
-        updatedCubes.forEach((cube) => (cube.winEffect = true));
-        setGameOver(true);
+      // Compute centers relative to board (pixels)
+      const cubeCenterX = cubeRect.left - boardRect.left + cubeRect.width / 2;
+      const cubeCenterY = cubeRect.top - boardRect.top + cubeRect.height / 2;
+      const letterCenterX = letterRect.left - boardRect.left + letterRect.width / 2;
+      const letterCenterY = letterRect.top - boardRect.top + letterRect.height / 2;
 
-        setTimeout(() => {
-          triggerFireworks(updatedCubes);
-          throwScatteredPieces(updatedCubes);
-        }, 200);
+      // distance between centers
+      const dx = letterCenterX - cubeCenterX;
+      const dy = letterCenterY - cubeCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // threshold: half-diagonal sum (safe) or smaller value if you want stricter snapping
+      const cubeRadius = Math.sqrt((cubeRect.width ** 2 + cubeRect.height ** 2)) / 2;
+      const letterRadius = Math.sqrt((letterRect.width ** 2 + letterRect.height ** 2)) / 2;
+      const threshold = cubeRadius + letterRadius; // touching/overlap threshold
+
+      // match char and within threshold
+      if (dist <= threshold && letter.char === cube.char) {
+        snappedIndex = i;
+
+        // snap letter to cube position (store as percents to match letter state)
+        const snappedLeftPercent = ((cubeRect.left - boardRect.left) / boardRect.width) * 100;
+        const snappedTopPercent = ((cubeRect.top - boardRect.top) / boardRect.height) * 100;
+
+        setLetters((prevLetters) =>
+          prevLetters.map((l, idx) =>
+            idx === draggingIndex
+              ? { ...l, x: snappedLeftPercent, y: snappedTopPercent, fading: true }
+              : l
+          )
+        );
+
+        dropSound.current.currentTime = 0;
+        dropSound.current.play();
+
+        // mark cube filled and keep its x,y as current top-left in pixels (optional)
+        return { ...cube, filled: true };
       }
 
-      return updatedCubes;
+      return cube;
     });
 
-    if (snappedIndex !== null) {
+    // check all filled
+    const allFilled = updatedCubes.length > 0 && updatedCubes.every((c) => c.filled);
+    if (allFilled) {
+      winSound.current.currentTime = 0;
+      winSound.current.play();
+      updatedCubes.forEach((c) => (c.winEffect = true));
+      setGameOver(true);
+
       setTimeout(() => {
-        setLetters((prev) => prev.filter((_, i) => i !== draggingIndex));
+        triggerFireworks(updatedCubes);
+        throwScatteredPieces(updatedCubes);
       }, 200);
     }
 
-    setDraggingIndex(null);
-  };
+    return updatedCubes;
+  });
+
+  if (snappedIndex !== null) {
+    // remove letter from letters after fade-out so user sees snap
+    setTimeout(() => {
+      setLetters((prev) => prev.filter((_, i) => i !== draggingIndex));
+    }, 200);
+  }
+
+  setDraggingIndex(null);
+};
 
   const triggerFireworks = (cubes) => {
     const effects = cubes.map((cube, i) => ({
@@ -289,6 +319,7 @@ export const Board = () => {
         {centerCubes.map((cube) => (
           <div
             key={cube.id}
+            data-cube-id={cube.id} 
             className={`cube ${cube.filled ? 'filled' : ''} ${cube.winEffect ? 'win' : ''}`}
             style={{ top: `${cube.y}px`, left: `${cube.x}px` }}
           >
@@ -299,6 +330,7 @@ export const Board = () => {
         {letters.map((letter, i) => (
           <div
             key={letter.id}
+            data-letter-id={letter.id} 
             className={`letter-box ${letter.fading ? 'fade-out' : ''}`}
             style={{ top: `${letter.y}%`, left: `${letter.x}%` }}
             onMouseDown={(e) => handleDown(i, e)}
